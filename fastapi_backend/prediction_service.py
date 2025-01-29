@@ -27,39 +27,34 @@ class PredictionService:
     def _load_resources(self):
         """Load the model and scalers with enhanced error handling"""
         try:
-            model_path = os.path.join(self.model_dir, 'models', 'model.keras')  # Updated path
+            # Print paths for debugging
+            logger.info(f"Looking for model in: {self.model_dir}")
+            
+            model_path = os.path.join(self.model_dir, 'model.keras')
             scaler_X_path = os.path.join(self.model_dir, 'scaler_X.pkl')
             scaler_y_path = os.path.join(self.model_dir, 'scaler_y.pkl')
+            
+            # Log file existence
+            logger.info(f"Model exists: {os.path.exists(model_path)}")
+            logger.info(f"Scaler X exists: {os.path.exists(scaler_X_path)}")
+            logger.info(f"Scaler Y exists: {os.path.exists(scaler_y_path)}")
 
             if not all(os.path.exists(p) for p in [model_path, scaler_X_path, scaler_y_path]):
-                raise FileNotFoundError("One or more required files not found")
+                raise FileNotFoundError(f"Missing files in {self.model_dir}")
 
-            # Custom model loading options
-            custom_objects = {
-                'GlobalAveragePooling1D': tf.keras.layers.GlobalAveragePooling1D,
-                'Bidirectional': tf.keras.layers.Bidirectional
-            }
-
-            # Load model with custom objects
-            self.model = tf.keras.models.load_model(
-                model_path,
-                custom_objects=custom_objects,
-                compile=False  # Prevent compilation issues
-            )
-
-            # Compile model with basic settings
-            self.model.compile(optimizer='adam', loss='mse')
-
+            # Load model using direct path
+            self.model = tf.keras.models.load_model(model_path)
+            
             # Load scalers
             with open(scaler_X_path, 'rb') as f:
                 self.scaler_X = pickle.load(f)
+            
             with open(scaler_y_path, 'rb') as f:
                 self.scaler_y = pickle.load(f)
-
-            logger.info("Model and scalers loaded successfully")
+                
         except Exception as e:
             logger.error(f"Error loading resources: {str(e)}")
-            raise RuntimeError(f"Failed to load model and scalers: {str(e)}")
+            raise
 
     def _verify_model(self):
         """Verify model can make predictions with dummy data"""

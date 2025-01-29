@@ -14,6 +14,13 @@ from llm import analyzer  # Add llm import
 logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
 logger = logging.getLogger('main')
 
+# Define model directory path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, 'models')
+
+# Ensure model directory exists
+os.makedirs(MODEL_DIR, exist_ok=True)
+
 class PredictionInput(BaseModel):
     base_price: float = Field(..., gt=0, description="Base price must be greater than 0")
     total_price: float = Field(..., gt=0, description="Total price must be greater than 0")
@@ -66,18 +73,17 @@ async def lifespan(app: FastAPI):
     # Startup
     global prediction_service
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_dir = os.path.join(current_dir, 'models')
-        prediction_service = PredictionService(model_dir)
+        prediction_service = PredictionService(MODEL_DIR)  # Changed from BASE_DIR to MODEL_DIR
         logger.info("PredictionService initialized successfully")
         yield
     except Exception as e:
         logger.error(f"Failed to initialize PredictionService: {e}")
+        if prediction_service:
+            logger.info("PredictionService shutdown complete")
         raise RuntimeError("Application failed to start") from e
     finally:
-        # Cleanup
-        prediction_service = None
-        logger.info("PredictionService shutdown complete")
+        if prediction_service:
+            logger.info("PredictionService shutdown complete")
 
 app = FastAPI(lifespan=lifespan)
 
